@@ -35,7 +35,8 @@ export async function processChatRequest(
   const workflowInput: WorkflowInput = {
     sessionId,
     userMessage: userMessage.trim(),
-    kv: env.HEADLINES_KV
+    kv: env.HEADLINES_KV,
+    ai: env.AI
   };
   
   // Create a mock step executor for workflow

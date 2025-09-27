@@ -12,6 +12,7 @@ export interface WorkflowInput {
   sessionId: string;
   userMessage: string;
   kv: KVNamespace;
+  ai: Ai;
 }
 
 export interface WorkflowOutput {
@@ -35,7 +36,7 @@ interface WorkflowStep {
 export class HeadlinesWorkflow {
   
   async run(input: WorkflowInput, step: WorkflowStep): Promise<WorkflowOutput> {
-    const { sessionId, userMessage, kv } = input;
+    const { sessionId, userMessage, kv, ai } = input;
     
     console.log(`[${new Date().toISOString()}] Workflow started for session: ${sessionId}`);
     console.log(`[${new Date().toISOString()}] Workflow processing message: "${userMessage}"`);
@@ -50,8 +51,8 @@ export class HeadlinesWorkflow {
     
     // Step 2: LLM Tagging - Extract topics and region from user message
     const llmTagResponse = await step.do("llm-tagging", async () => {
-      console.log(`[${new Date().toISOString()}] Workflow Step 2: LLM Tagging`);
-      const tagResponse = await llm_call(userPrefs, userMessage);
+      console.log(`[${new Date().toISOString()}] Workflow Step 2: LLM Tagging with Cloudflare AI`);
+      const tagResponse = await llm_call(userPrefs, userMessage, ai);
       console.log(`[${new Date().toISOString()}] Workflow Step 2 Complete: LLM tagged with`, JSON.stringify(tagResponse));
       return tagResponse;
     });
@@ -122,8 +123,8 @@ export class HeadlinesWorkflow {
     
     // Step 8: LLM Summarization
     const summarizedArticles = await step.do("llm-summarization", async () => {
-      console.log(`[${new Date().toISOString()}] Workflow Step 8: LLM Summarization`);
-      const summarized = await llm_summarize(userMessage, filteredArticles as SummarizedArticle[]);
+      console.log(`[${new Date().toISOString()}] Workflow Step 8: LLM Summarization with Cloudflare AI`);
+      const summarized = await llm_summarize(userMessage, filteredArticles as SummarizedArticle[], ai);
       console.log(`[${new Date().toISOString()}] Workflow Step 8 Complete: Summarized ${summarized.length} articles`);
       return summarized;
     });
