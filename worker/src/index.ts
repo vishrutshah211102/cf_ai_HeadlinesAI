@@ -16,6 +16,10 @@ import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from "cloudflare:work
 import mockData from "../../mock/mock.json";
 // Import cookie utilities
 import { getOrCreateSessionId } from "./cookie";
+// Import LLM logic
+import { llm_call } from "./llm_logic";
+// Import KV storage utilities
+import { getUserPreferences, updateUserPreferences, getSeenArticles, addSeenArticles } from "./storing_info";
 
 export class Pipeline extends WorkflowEntrypoint<Env> {
   async run(event: WorkflowEvent<unknown>, step: WorkflowStep) {
@@ -64,7 +68,32 @@ export default {
 					);
 				}
 				
-				console.log(`[${new Date().toISOString()}] Validation passed, returning mock data`);
+				console.log(`[${new Date().toISOString()}] Validation passed, processing with LLM and KV storage`);
+				
+				// Get user preferences from KV storage
+				const userPrefs = await getUserPreferences(env.HEADLINES_KV, sessionId);
+				console.log(`[${new Date().toISOString()}] Retrieved user preferences:`, JSON.stringify(userPrefs));
+				
+				// Call LLM function with user message and retrieved preferences
+				const llmResponse = await llm_call(userPrefs, requestBody);
+				console.log(`[${new Date().toISOString()}] LLM Function returned:`, JSON.stringify(llmResponse));
+				
+				// Update user preferences with LLM response
+				if (llmResponse.topics || llmResponse.region) {
+					await updateUserPreferences(env.HEADLINES_KV, sessionId, {
+						topics: llmResponse.topics,
+						region: llmResponse.region
+					});
+				}
+				
+				// Get seen articles for this user
+				const seenArticles = await getSeenArticles(env.HEADLINES_KV, sessionId);
+				console.log(`[${new Date().toISOString()}] User has seen ${seenArticles.ids.length} articles`);
+				
+				// Mark the returned articles as seen (extract IDs from mockData)
+				const articleIds = mockData.map(article => article.id);
+				await addSeenArticles(env.HEADLINES_KV, sessionId, articleIds);
+				
 				const headers: Record<string, string> = {
 					"Content-Type": "application/json",
 					"Access-Control-Allow-Origin": "*",
