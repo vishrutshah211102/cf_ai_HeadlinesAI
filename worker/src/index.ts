@@ -17,7 +17,9 @@ import mockData from "../../mock/mock.json";
 // Import cookie utilities
 import { getOrCreateSessionId } from "./cookie";
 // Import LLM logic
-import { llm_call } from "./llm_logic";
+import { llm_call } from "./llm_tagger";
+// Import LLM summarizer
+import { llm_summarize, type SummarizedArticle } from "./llm_summarizer";
 // Import KV storage utilities
 import { getUserPreferences, updateUserPreferences, getSeenArticles, addSeenArticles } from "./storing_info";
 // Import article filtering utilities
@@ -121,6 +123,10 @@ export default {
 				
 				console.log(`[${new Date().toISOString()}] Returning top 5 articles with IDs:`, returnedArticleIds);
 				
+				// Summarize articles before returning to user
+				const summarizedArticles = await llm_summarize(requestBody, processedArticles as SummarizedArticle[]);
+				console.log(`[${new Date().toISOString()}] Articles summarized, returning ${summarizedArticles.length} summarized articles to user`);
+				
 				const headers: Record<string, string> = {
 					"Content-Type": "application/json",
 					"Access-Control-Allow-Origin": "*",
@@ -133,7 +139,7 @@ export default {
 					headers["Set-Cookie"] = setCookieHeader;
 				}
 				
-				return new Response(JSON.stringify(processedArticles), {
+				return new Response(JSON.stringify(summarizedArticles), {
 					headers,
 				});
 			} catch (error) {
