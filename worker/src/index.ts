@@ -20,6 +20,8 @@ import { getOrCreateSessionId } from "./cookie";
 import { llm_call } from "./llm_logic";
 // Import KV storage utilities
 import { getUserPreferences, updateUserPreferences, getSeenArticles, addSeenArticles } from "./storing_info";
+// Import article filtering utilities
+import { processArticles, type Article } from "./filter";
 
 export class Pipeline extends WorkflowEntrypoint<Env> {
   async run(event: WorkflowEvent<unknown>, step: WorkflowStep) {
@@ -78,7 +80,14 @@ export default {
 				const llmResponse = await llm_call(userPrefs, requestBody);
 				console.log(`[${new Date().toISOString()}] LLM Function returned:`, JSON.stringify(llmResponse));
 				
-				// Update user preferences with LLM response
+				// Merge current preferences with LLM response for immediate use
+				const currentPrefs = {
+					topics: llmResponse.topics || userPrefs.topics,
+					region: llmResponse.region || userPrefs.region
+				};
+				console.log(`[${new Date().toISOString()}] Using preferences for filtering:`, JSON.stringify(currentPrefs));
+				
+				// Update user preferences with LLM response (store for future requests)
 				if (llmResponse.topics || llmResponse.region) {
 					await updateUserPreferences(env.HEADLINES_KV, sessionId, {
 						topics: llmResponse.topics,
@@ -90,9 +99,27 @@ export default {
 				const seenArticles = await getSeenArticles(env.HEADLINES_KV, sessionId);
 				console.log(`[${new Date().toISOString()}] User has seen ${seenArticles.ids.length} articles`);
 				
-				// Mark the returned articles as seen (extract IDs from mockData)
-				const articleIds = mockData.map(article => article.id);
-				await addSeenArticles(env.HEADLINES_KV, sessionId, articleIds);
+				// Process articles: filter by CURRENT preferences (including LLM response) and reorder (unseen first, then seen), limited to top 5
+				const processedArticles = processArticles(
+					mockData as Article[],
+					seenArticles.ids,
+					currentPrefs.topics,
+					currentPrefs.region,
+					5 // Limit to top 5 articles
+				);
+				
+				// Mark ALL returned articles as seen (both new and previously seen ones being re-shown)
+				const returnedArticleIds = processedArticles.map(article => article.id);
+				const newArticleIds = returnedArticleIds.filter(id => !seenArticles.ids.includes(id));
+				
+				if (newArticleIds.length > 0) {
+					console.log(`[${new Date().toISOString()}] Marking ${newArticleIds.length} new articles as seen out of ${returnedArticleIds.length} total returned:`, newArticleIds);
+					await addSeenArticles(env.HEADLINES_KV, sessionId, newArticleIds);
+				} else {
+					console.log(`[${new Date().toISOString()}] All ${returnedArticleIds.length} returned articles were already seen`);
+				}
+				
+				console.log(`[${new Date().toISOString()}] Returning top 5 articles with IDs:`, returnedArticleIds);
 				
 				const headers: Record<string, string> = {
 					"Content-Type": "application/json",
@@ -106,7 +133,7 @@ export default {
 					headers["Set-Cookie"] = setCookieHeader;
 				}
 				
-				return new Response(JSON.stringify(mockData), {
+				return new Response(JSON.stringify(processedArticles), {
 					headers,
 				});
 			} catch (error) {
