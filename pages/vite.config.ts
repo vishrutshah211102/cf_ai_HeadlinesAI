@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/chat': {
-        target: 'http://localhost:8787',
+        target: ' https://worker.vishrutshah211102.workers.dev',
         changeOrigin: true,
         secure: false,
       }

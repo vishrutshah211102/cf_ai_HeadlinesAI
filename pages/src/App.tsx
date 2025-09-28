@@ -42,7 +42,7 @@ function App() {
     addLog('info', `Sending request: "${message}"`)
 
     try {
-      const response = await fetch('/chat', {
+      const response = await fetch(' https://worker.vishrutshah211102.workers.dev/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
