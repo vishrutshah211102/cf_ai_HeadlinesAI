@@ -1,5 +1,14 @@
 /**
- * LLM Summarizer for processing article summaries
+ * LLM Summarizer for processing art        try {
+          // Llama model expects messages format
+          const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct-fp8' as any, {
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            max_tokens: 150,
+            temperature: 0.3
+          });maries
  */
 
 export interface SummarizedArticle {
@@ -31,7 +40,7 @@ export async function llm_summarize(userMessage: string, articles: SummarizedArt
       articles.map(async (article, index) => {
         console.log(`[${new Date().toISOString()}] LLM Summarizer - Summarizing article ${article.id} (${index + 1}/${articles.length})`);
         
-        const systemPrompt = `You are a news summarizer. Create a concise, engaging summary of the news article based on the user's interest. Keep it under 100 words and make it relevant to their query.`;
+        const { systemPrompt } = await import('./summarizerPrompts');
         
         const userPrompt = `User query: "${userMessage}"
 Article Title: ${article.title}
@@ -40,7 +49,8 @@ Original Content: ${article.body.substring(0, 500)}...
 Create a concise summary:`;
         
         try {
-          const aiResponse = await ai.run('@hf/thebloke/llama-2-13b-chat-awq' as any, {
+          // Llama model expects messages format
+          const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct-fp8' as any, {
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt }
@@ -51,8 +61,24 @@ Create a concise summary:`;
           
           let summary = 'Summary unavailable';
           
-          if (aiResponse && typeof aiResponse === 'object' && 'response' in aiResponse) {
-            summary = (aiResponse.response as string).trim();
+          console.log(`[${new Date().toISOString()}] LLM Summarizer - Raw AI Response for article ${article.id}:`, JSON.stringify(aiResponse));
+          
+          if (aiResponse && typeof aiResponse === 'object') {
+            // Handle different response formats from BART model
+            if ('summary' in aiResponse) {
+              summary = (aiResponse.summary as string).trim();
+            } else if ('response' in aiResponse) {
+              summary = (aiResponse.response as string).trim();
+            } else if ('result' in aiResponse) {
+              summary = (aiResponse.result as string).trim();
+            } else if (typeof aiResponse === 'object' && aiResponse.constructor === Object) {
+              // If it's a plain object, try to get the first string value
+              const values = Object.values(aiResponse);
+              const firstString = values.find(val => typeof val === 'string');
+              if (firstString) {
+                summary = (firstString as string).trim();
+              }
+            }
           } else if (typeof aiResponse === 'string') {
             summary = aiResponse.trim();
           }
