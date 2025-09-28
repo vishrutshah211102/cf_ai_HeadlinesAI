@@ -1,4 +1,4 @@
-/**
+  /**
  * LLM Summarizer for processing art        try {
           // Llama model expects messages format
           const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct-fp8' as any, {
@@ -50,13 +50,22 @@ Create a concise summary:`;
         
         try {
           // Llama model expects messages format
-          const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct-fp8' as any, {
+          const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct' as any, {
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt }
             ],
             max_tokens: 150,
-            temperature: 0.3
+            temperature: 0.3,
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                type: "object",
+                additionalProperties: false,
+                properties: { summary: { type: "string" } },
+                required: ["summary"]
+              }
+            }
           });
           
           let summary = 'Summary unavailable';
@@ -65,7 +74,9 @@ Create a concise summary:`;
           
           if (aiResponse && typeof aiResponse === 'object') {
             // Handle different response formats from BART model
-            if ('summary' in aiResponse) {
+            if ('response' in aiResponse && aiResponse.response && typeof (aiResponse as any).response === 'object' && 'summary' in (aiResponse as any).response) {
+              summary = ((aiResponse as any).response.summary as string).trim();
+            } else if ('summary' in aiResponse) {
               summary = (aiResponse.summary as string).trim();
             } else if ('response' in aiResponse) {
               summary = (aiResponse.response as string).trim();
