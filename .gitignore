@@ -1,0 +1,7 @@
+cat >> .gitignore << 'EOF'
+# Dependencies
+node_modules/
+
+# Cloudflare / Wrangler
+worker/wrangler.jsonc
+node_modules/.cache/wrangler/wrangler-account.json
