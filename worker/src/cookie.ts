@@ -74,9 +74,20 @@ export function createSetCookieHeader(name: string, value: string, options: {
 }
 
 /**
- * Get or create session ID from cookies
+ * Get or create session ID from cookies or custom header
  */
-export function getOrCreateSessionId(request: Request): { sessionId: string; isNewSession: boolean; setCookieHeader?: string } {
+export function getOrCreateSessionId(request: Request): { sessionId: string; isNewSession: boolean; setCookieHeader?: string; sessionHeader?: string } {
+  // First try to get session from custom header (for cross-origin)
+  const sessionHeader = request.headers.get('X-Session-ID');
+  if (sessionHeader) {
+    console.log(`[${new Date().toISOString()}] Existing session from header: ${sessionHeader}`);
+    return {
+      sessionId: sessionHeader,
+      isNewSession: false
+    };
+  }
+
+  // Fallback to cookies
   const cookieHeader = request.headers.get('Cookie');
   const cookies = parseCookies(cookieHeader);
   
@@ -96,14 +107,15 @@ export function getOrCreateSessionId(request: Request): { sessionId: string; isN
   const setCookieHeader = createSetCookieHeader('sid', newSessionId, {
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: '/',
-    httpOnly: true,
-    secure: true,
+    httpOnly: false, // Allow JavaScript access for debugging
+    secure: false,   // Allow non-HTTPS for localhost development
     sameSite: 'Lax'
   });
 
   return {
     sessionId: newSessionId,
     isNewSession: true,
-    setCookieHeader
+    setCookieHeader,
+    sessionHeader: newSessionId // Return session ID for client to store
   };
 }

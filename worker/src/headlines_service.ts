@@ -18,7 +18,7 @@ export async function processChatRequest(
   console.log(`[${new Date().toISOString()}] Headlines Service: Processing chat request`);
   
   // Handle session management
-  const { sessionId, isNewSession, setCookieHeader } = getOrCreateSessionId(request);
+  const { sessionId, isNewSession, setCookieHeader, sessionHeader } = getOrCreateSessionId(request);
   console.log(`[${new Date().toISOString()}] Headlines Service: Session ${sessionId} (New: ${isNewSession})`);
   
   // Get and validate request body
@@ -57,14 +57,21 @@ export async function processChatRequest(
   // Prepare response headers
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": request.headers.get('Origin') || "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS", 
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Session-ID",
+    "Access-Control-Expose-Headers": "X-Session-ID",
+    "Access-Control-Allow-Credentials": "true",
   };
   
   // Set cookie if it's a new session
   if (setCookieHeader) {
     headers["Set-Cookie"] = setCookieHeader;
+  }
+
+  // Return session ID in header for client-side storage
+  if (sessionHeader) {
+    headers["X-Session-ID"] = sessionHeader;
   }
   
   console.log(`[${new Date().toISOString()}] Headlines Service: Returning ${result.articles.length} articles`);
@@ -75,14 +82,16 @@ export async function processChatRequest(
 /**
  * Handle CORS preflight requests
  */
-export function handleCORSPreflight(): Response {
+export function handleCORSPreflight(request?: Request): Response {
   console.log(`[${new Date().toISOString()}] Headlines Service: Handling CORS preflight`);
   
   return new Response(null, {
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": request?.headers.get('Origin') || "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, X-Session-ID",
+      "Access-Control-Expose-Headers": "X-Session-ID",
+      "Access-Control-Allow-Credentials": "true",
     },
   });
 }

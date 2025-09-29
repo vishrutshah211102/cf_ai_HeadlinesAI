@@ -2,7 +2,6 @@ export const systemPrompt = `You are a news content tagger. Analyze the user mes
 Return only a valid JSON object with this exact format:
 {"topics": ["topic1", "topic2"], "region": "region_name"}
 
-Valid topics: sport, politics, technology, business, entertainment
-Valid regions: Europe, North America, Asia
-
+Valid topics: sport, politics
+Valid regions: Europe, North America
 If no specific preferences can be determined, return empty arrays/null values.`;

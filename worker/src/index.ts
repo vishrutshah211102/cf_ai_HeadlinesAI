@@ -53,22 +53,22 @@ export default {
 						status,
 						headers: {
 							"Content-Type": "application/json",
-							"Access-Control-Allow-Origin": "*",
+							"Access-Control-Allow-Origin": request.headers.get('Origin') || "*",
 							"Access-Control-Allow-Methods": "POST, OPTIONS",
-							"Access-Control-Allow-Headers": "Content-Type",
+							"Access-Control-Allow-Headers": "Content-Type, X-Session-ID",
+							"Access-Control-Expose-Headers": "X-Session-ID",
+							"Access-Control-Allow-Credentials": "true",
 						},
 					}
 				);
 			}
 		}
 		
-		// Handle CORS preflight requests
-		if (request.method === "OPTIONS") {
-			console.log(`[${new Date().toISOString()}] Worker: Handling CORS preflight`);
-			return handleCORSPreflight();
-		}
-		
-		// Default response for other requests
+    // Handle CORS preflight requests
+    if (request.method === "OPTIONS") {
+      console.log(`[${new Date().toISOString()}] Worker: Handling CORS preflight`);
+      return handleCORSPreflight(request);
+    }		// Default response for other requests
 		console.log(`[${new Date().toISOString()}] Worker: Default response for ${request.method} ${url.pathname}`);
 		return new Response('Hello World! Headlines AI Worker is running.');
 	},
