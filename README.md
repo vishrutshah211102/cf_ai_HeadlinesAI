@@ -1,6 +1,6 @@
 # cf_ai_HeadlinesAI
 
-An AI-powered news application built on Cloudflare infrastructure that delivers personalized news recommendations using machine learning and user preferences stored in browser memory.
+An AI-powered news application built on Cloudflare infrastructure that delivers personalized news recommendations using llms and user preferences stored in browser memory.
 
 ## Live Demo
 
